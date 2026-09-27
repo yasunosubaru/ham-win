@@ -24,6 +24,10 @@
     <SelfContained>true</SelfContained>
     <PublishSingleFile>false</PublishSingleFile>
 
+    <!-- exe 图标。窗口与任务栏图标另见 MainWindow 的 AppWindow.SetIcon：
+         unpackaged 没有包身份，光设 ApplicationIcon 只会改 exe 资源。 -->
+    <ApplicationIcon>Assets\ham-win.ico</ApplicationIcon>
+
     <!--
       CS0108 只来自 WinUI 的 XAML 代码生成器：它为 x:Class="MainWindow" 生成
       public object Content，而 Window 基类已有 Content，于是报"隐藏继承的成员"。
@@ -36,6 +40,17 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.1742" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 图标：ApplicationIcon 只负责 exe 资源；AppWindow.SetIcon 在运行时
+         从输出目录读同一个文件，所以必须 CopyToOutputDirectory。 -->
+    <Content Include="Assets\ham-win.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\ham-win.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>

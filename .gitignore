@@ -5,6 +5,12 @@ publish/
 ## WinUI 3 的发布目录叫 pub/（不是 publish/）—— 两者都要拦。
 ## 漏掉它会把 200+ 个 Windows SDK 产物（winmd / pri / 各语言 mui）推进仓库。
 pub/
+## 出包目录。**注意**：`release/` 不会因为 `*.exe` 而被整体忽略——
+## 那只拦住一个 exe，里面几百个 dll/winmd/mui 仍会被 git add -A 卷进仓库。
+## 漏掉这一条的后果是往公开仓库推几百 MB 二进制，必须整目录忽略。
+release/
+dist/
+out/
 *.user
 *.suo
 .vs/

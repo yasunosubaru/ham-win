@@ -465,13 +465,45 @@ public sealed class RatingPage : HamPage
     }
 }
 
-/// <summary>设置页：读写 appdata.json 里的设置。</summary>
+/// <summary>设置页：凭据输入、登录并同步、绩点口径、其它偏好。</summary>
 public sealed class SettingsPage : HamPage
 {
+    private readonly TextBlock _syncNote = new()
+    {
+        TextWrapping = TextWrapping.Wrap,
+        FontSize = 12,
+        Opacity = 0.75,
+    };
+
     public SettingsPage(AppState state) : base(state)
     {
         var s = State.Settings;
         var presets = GpaScale.Presets;
+
+        // ── 凭据 + 同步 ──
+        var idBox = new TextBox
+        {
+            Text = s.StudentId ?? string.Empty,
+            PlaceholderText = "学号",
+            MinWidth = 240,
+        };
+        var pwdBox = new PasswordBox
+        {
+            Password = s.PortalPassword ?? string.Empty,
+            PlaceholderText = "信息门户密码",
+            MinWidth = 240,
+        };
+
+        var syncButton = new Button { Content = "登录并同步", MinWidth = 120 };
+        syncButton.Click += async (_, _) => await RunSyncAsync(idBox, pwdBox, syncButton);
+
+        if (State.LastSyncMessage is { } last) _syncNote.Text = last;
+
+        var account = new StackPanel { Spacing = 8 };
+        account.Children.Add(LabelledRow("学号", idBox));
+        account.Children.Add(LabelledRow("密码", pwdBox));
+        account.Children.Add(LabelledRow(string.Empty, syncButton));
+        account.Children.Add(_syncNote);
 
         // 展示的是**解析后的**口径名，不是存储里的原始字符串。
         // 存储里可能是历史遗留的英文 "Standard 4.0"，直接显示会让人以为出了错。
@@ -513,6 +545,8 @@ public sealed class SettingsPage : HamPage
 
         var blocks = new List<UIElement>
         {
+            Card(account, "信息门户"),
+
             Card(new StackPanel
             {
                 Children =
@@ -545,11 +579,64 @@ public sealed class SettingsPage : HamPage
                     Field("版本", "Ham.Ui · WinUI 3"),
                 },
             }, "关于"),
-            SourceNote("本页面读写的设置与 WPF 版是同一份 appdata.json，两边会互相覆盖。"
-                + "学期、提醒、通知等选项的编辑界面仍在 WPF 版里；"
-                + "绩点口径已在此可直接切换，写盘同样经过 DataStore 的原子写入路径。"),
+            SourceNote("凭据与学号仅保存在本机 %LOCALAPPDATA%\\Ham\\appdata.json，"
+                + "不写入日志、不上传。密码以明文存放，共享电脑上用完请及时清理。\n"
+                + "本页面读写的设置与 WPF 版是同一份 appdata.json，两边会互相覆盖；"
+                + "两个应用都能独立完成登录与同步。"),
         };
 
         Compose("设置", blocks.ToArray());
+    }
+
+    private async Task RunSyncAsync(TextBox idBox, PasswordBox pwdBox, Button button)
+    {
+        // 先把输入写回设置：AppState.SyncEducationAsync 从 Settings 读凭据。
+        State.Settings.StudentId = idBox.Text.Trim();
+        State.Settings.PortalPassword = pwdBox.Password;
+
+        button.IsEnabled = false;
+        button.Content = "正在登录…";
+        _syncNote.Text = "即将打开信息门户登录页，请在窗口中完成登录。";
+        _syncNote.Opacity = 1.0;
+
+        try
+        {
+            var (ok, message) = await State.SyncEducationAsync();
+            _syncNote.Text = message;
+            _syncNote.Opacity = ok ? 1.0 : 1.0;
+
+            if (ok) Refresh();
+        }
+        catch (Exception ex)
+        {
+            _syncNote.Text = "同步失败：" + ex.Message;
+            _syncNote.Opacity = 1.0;
+            Ham.Infrastructure.Logging.Log.Error("设置页同步异常", ex);
+        }
+        finally
+        {
+            button.IsEnabled = true;
+            button.Content = "登录并同步";
+        }
+    }
+
+    /// <summary>重新构建本页（同步成功后刷新各项显示）。</summary>
+    private void Refresh()
+    {
+        var s = State.Settings;
+        Content = new ScrollViewer
+        {
+            Content = new StackPanel
+            {
+                Spacing = 14,
+                Children =
+                {
+                    new TextBlock { Text = "设置", FontSize = 22, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold },
+                    SourceNote($"已同步：{State.Courses.Count} 门课程、{State.Scores.Count} 条成绩"
+                               + (State.LastEducationSync is { } at ? $"（{at:yyyy-MM-dd HH:mm}）" : "")),
+                },
+            },
+        };
+        _ = s;
     }
 }

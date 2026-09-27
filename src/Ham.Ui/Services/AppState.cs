@@ -1,6 +1,12 @@
+using System.Globalization;
+
 using Ham.Core.Models;
 using Ham.Infrastructure.Campus;
+using Ham.Infrastructure.Cas;
+using Ham.Infrastructure.Education;
 using Ham.Infrastructure.Library.Models;
+using Ham.Infrastructure.Logging;
+using Ham.Infrastructure.Net;
 using Ham.Infrastructure.Rating.Models;
 using Ham.Infrastructure.Storage;
 using Microsoft.UI.Dispatching;
@@ -94,6 +100,148 @@ public sealed class AppState
         Settings.Theme = Dark ? "Dark" : "Light";
         return _store.SaveAsync(Data);
     }
+
+    /// <summary>最近一次同步的结果摘要，供界面显示。</summary>
+    public string? LastSyncMessage { get; private set; }
+
+    /// <summary>
+    /// 登录信息门户并同步课表与成绩。
+    /// </summary>
+    /// <remarks>
+    /// 这是 WinUI 3 版的<b>独立同步入口</b>——本应用不再依赖 WPF 版才能拿到数据。
+    /// 流程与 WPF 版共用 <see cref="EducationSession"/>，只有浏览器宿主不同。
+    /// <para>
+    /// <b>判定成功的依据是「解析出了数据」，不是「拿到了 Cookie」。</b>
+    /// 原因：<c>CoreWebView2CookieManager.GetCookiesAsync</c> 是否返回 HttpOnly
+    /// Cookie 并没有明确文档（社区 issue #2199 至今无结论），而 CAS 的
+    /// JSESSIONID/CASTGC 极可能是 HttpOnly。若拿它当硬门槛，一旦读不到就会
+    /// 误判为登录失败——而此时数据其实已经取回来了。
+    /// </para>
+    /// </remarks>
+    public async Task<(bool Ok, string Message)> SyncEducationAsync(
+        Action<string>? status = null,
+        CancellationToken ct = default)
+    {
+        var studentId = Settings.StudentId?.Trim() ?? string.Empty;
+        var password = Settings.PortalPassword ?? string.Empty;
+
+        if (studentId.Length == 0) return (false, "请先填写学号。");
+        if (password.Length == 0) return (false, "请先填写信息门户密码。");
+
+        var plan = BuildEducationPlan();
+        var window = new LoginWindow(CampusEndpoints.Default, plan, studentId, password);
+        window.Activate();
+
+        CasLoginOutcome outcome;
+        try
+        {
+            outcome = await window.RunAsync(ct);
+        }
+        finally
+        {
+            window.CloseOnce();
+        }
+
+        // 失败必须落日志。曾经这里只把消息返回界面，日志里看不到任何痕迹，
+        // 导致"登录成功但读不出成绩"完全没有诊断线索。
+        if (outcome.Payloads.Failures.Count > 0)
+        {
+            Log.Error("同步教务: 浏览器代取失败 -> "
+                + string.Join(" | ", outcome.Payloads.Failures), null);
+        }
+
+        if (outcome.Cookies.Count > 0)
+        {
+            BrowserCookies.Clear();
+            BrowserCookies.AddRange(outcome.Cookies);
+        }
+
+        var courseJson = outcome.Payloads.BodyOf(EducationEndpoints.CoursePath);
+        var courses = EducationParser.ParseCourses(
+            courseJson ?? string.Empty, Settings.SemesterYear, Settings.SemesterNumber);
+
+        var scoreJson = outcome.Payloads.BodyOf(EducationEndpoints.ScorePath);
+        var scoreRecords = EducationParser.ParseScores(scoreJson ?? string.Empty)?.Scores;
+
+        // 数据一条都没解析出来，才算真的失败。
+        var gotCourses = courses?.Courses.Count > 0;
+        var gotScores = scoreRecords?.Count > 0;
+        if (!gotCourses && !gotScores)
+        {
+            var why = outcome.Payloads.Failures.Count > 0
+                ? "接口返回了错误：" + string.Join("；", outcome.Payloads.Failures)
+                : "登录窗口没有带回任何可解析的数据。"
+                  + "若窗口提示超时，请确认学号密码，以及账号是否已完成「账号激活」。";
+            LastSyncMessage = "同步失败：" + why;
+            Log.Error("同步教务: " + why, null);
+            return (false, LastSyncMessage);
+        }
+
+        Data.Courses = courses!.Courses
+            .Where(c => !courses.IgnoredCourseNames.Contains(c.Name))
+            .ToList();
+        Data.Scores = scoreRecords!.ToList();
+
+        if (outcome.Payloads.BodyOf(EducationEndpoints.UserInfoPath) is { } infoHtml
+            && EducationClient.ParseUserInfoHtml(infoHtml) is { } info)
+        {
+            if (info.StudentId.Length > 0) Settings.StudentId = info.StudentId;
+            if (info.College.Length > 0) Settings.College = info.College;
+            if (info.Major.Length > 0) Settings.Major = info.Major;
+        }
+
+        Settings.PortalPassword = password;
+        Data.LastEducationSync = DateTimeOffset.Now;
+        await SaveSettingsAsync();
+
+        LastSyncMessage = $"同步成功：{Data.Courses.Count} 门课程、{Data.Scores.Count} 条成绩。";
+        status?.Invoke(LastSyncMessage);
+        return (true, LastSyncMessage);
+    }
+
+    /// <summary>
+    /// 教务代取计划。
+    /// </summary>
+    /// <remarks>
+    /// 三个目标全部是 XHR 模式，路径与 WPF 版<b>逐字一致</b>——
+    /// 改这里等于改两个应用，所以不要只改一处。
+    /// <list type="bullet">
+    /// <item>成绩动作必须带 <c>doType=query</c>：zfsoft 对无 doType 的 GET 返 404。</item>
+    /// <item><c>validate</c> 只需存在且非空；实验记录见
+    /// <c>EducationClient.BuildScoreValidateValue()</c>。</item>
+    /// </list>
+    /// </remarks>
+    public static FetchPlan BuildEducationPlan()
+    {
+        var semesterCode = SemesterCode.ToInternal(new AppSettings().SemesterNumber);
+
+        return new FetchPlan(
+        [
+            new FetchTarget(EducationEndpoints.CoursePath, new Dictionary<string, string>
+            {
+                ["validate"] = EducationClient.BuildValidateToken(),
+                ["xnm"] = new AppSettings().SemesterYear.ToString(CultureInfo.InvariantCulture),
+                ["xqm"] = semesterCode?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                ["xzlx"] = "ck",
+            }),
+            new FetchTarget(EducationEndpoints.ScorePath, new Dictionary<string, string>
+            {
+                ["validate"] = EducationClient.BuildScoreValidateValue(),
+                ["xnm"] = string.Empty,
+                ["xqm"] = string.Empty,
+                ["sy_id"] = string.Empty,
+                ["sq_id"] = string.Empty,
+                ["sfzgcj"] = string.Empty,
+                ["zd_fzdm"] = EducationEndpoints.ScoreStudentFlag,
+                ["queryModel.showCount"] = "150",
+                ["queryModel.currentPage"] = "1",
+            }),
+            new FetchTarget(EducationEndpoints.UserInfoPath),
+        ]);
+    }
+
+    /// <summary>浏览器侧取得的 Cookie，图书馆换票需要 CAS 票据。</summary>
+    public List<CasCookie> BrowserCookies { get; } = [];
 }
 
 /// <summary>一个导航分区。</summary>

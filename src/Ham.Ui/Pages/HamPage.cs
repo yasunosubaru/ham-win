@@ -178,11 +178,15 @@ public abstract class HamPage : Page
         return g;
     }
 
-    /// <summary>统一的「去 WPF 版同步」指引。</summary>
+    /// <summary>尚未同步时的指引。</summary>
+    /// <remarks>
+    /// 以前这里写的是"请去运行 WPF 版同步"——那段时间 WinUI 3 没有登录流程。
+    /// 现在登录已迁入本应用（<c>LoginWindow</c> + <c>AppState.SyncEducationAsync</c>），
+    /// 留着旧文案会把用户引到已经不必要的步骤上。
+    /// </remarks>
     protected static Border SyncHint(string what) => SourceNote(
         $"尚未同步{what}。\n"
-        + "请先运行 WPF 版（publish\\Ham.exe）的「设置 → 登录并同步」。"
-        + "同步结果会写进 %LOCALAPPDATA%\\Ham\\appdata.json，本页面直接读同一份数据。\n"
-        + "登录流程需要 CAS 与图形验证码，因此登录暂时留在已验证的 WPF 版中，"
-        + "WinUI 3 先承接数据展示。", warn: true);
+        + "请到「设置」填写学号与信息门户密码，点「登录并同步」。\n"
+        + "本应用会自行打开信息门户完成登录，并在同一窗口内读取课表与成绩。\n"
+        + "数据保存在 %LOCALAPPDATA%\\Ham\\appdata.json，仅存本机。", warn: true);
 }

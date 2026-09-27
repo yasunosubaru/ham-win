@@ -5,6 +5,11 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:Ham.Ui">
 
+    <!--
+      根容器刻意不设 Background：Mica 是靠系统把壁纸合成进来的，
+      根容器一旦刷了不透明颜色，材质就完全被盖住，看不到任何效果。
+      层次感由各卡片自己的半透明填充色提供。
+    -->
     <Grid x:Name="Root">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -13,49 +18,64 @@
         </Grid.RowDefinitions>
 
         <!-- 顶栏 -->
-        <Grid Grid.Row="0" Padding="20,14" ColumnSpacing="16">
+        <Grid Grid.Row="0" Padding="24,16,24,12" ColumnSpacing="16">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <TextBlock Grid.Column="0" Text="武汉大学" FontSize="20" FontWeight="SemiBold"
+            <TextBlock Grid.Column="0" Text="武汉大学" FontSize="24" FontWeight="SemiBold"
                        VerticalAlignment="Center" />
 
             <TextBlock x:Name="TermText" Grid.Column="1" VerticalAlignment="Center"
-                       Opacity="0.7" HorizontalAlignment="Left" />
+                       Opacity="0.65" HorizontalAlignment="Left" Margin="4,0,0,2" />
 
-            <Button Grid.Column="2" x:Name="ThemeToggle" Content="切换主题" Click="OnThemeToggle" />
+            <Button Grid.Column="2" x:Name="ThemeToggle" Content="切换主题" Click="OnThemeToggle"
+                    VerticalAlignment="Center" />
         </Grid>
 
         <!-- 侧边导航 + 内容 -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="180" />
+                <!--
+                  NavigationView 自带 pane 宽度与折叠行为。
+                  以前这里是一个裸 ListView，选中态、悬停态、边距全是默认灰阶，
+                  与 Mica 的材质感完全不搭。
+                -->
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <ListView x:Name="Nav" Grid.Column="0" SelectionMode="Single"
-                      SelectionChanged="OnNavChanged" Padding="8,0">
-                <ListViewItem Content="状态" Tag="status" />
-                <ListViewItem Content="课程" Tag="course" />
-                <ListViewItem Content="日程" Tag="schedule" />
-                <ListViewItem Content="成绩" Tag="score" />
-                <ListViewItem Content="图书馆" Tag="library" />
-                <ListViewItem Content="运动" Tag="sport" />
-                <ListViewItem Content="校巴" Tag="bus" />
-                <ListViewItem Content="给分" Tag="rating" />
-                <ListViewItem Content="设置" Tag="settings" />
-            </ListView>
+            <NavigationView x:Name="Nav" Grid.Column="0"
+                            IsBackButtonVisible="Collapsed"
+                            IsSettingsVisible="False"
+                            IsPaneToggleButtonVisible="False"
+                            IsTitleBarAutoPaddingEnabled="False"
+                            PaneDisplayMode="Left"
+                            CompactModeThresholdWidth="0"
+                            OpenPaneLength="220"
+                            SelectionChanged="OnNavChanged">
+                <NavigationView.MenuItems>
+                    <NavigationViewItem Content="🏠  状态" Tag="status" />
+                    <NavigationViewItem Content="📚  课程" Tag="course" />
+                    <NavigationViewItem Content="📅  日程" Tag="schedule" />
+                    <NavigationViewItem Content="📊  成绩" Tag="score" />
+                    <NavigationViewItem Content="📚  图书馆" Tag="library" />
+                    <NavigationViewItem Content="🏀  运动" Tag="sport" />
+                    <NavigationViewItem Content="🚌  校巴" Tag="bus" />
+                    <NavigationViewItem Content="⭐  给分" Tag="rating" />
+                    <NavigationViewItem Content="⚙  设置" Tag="settings" />
+                </NavigationView.MenuItems>
+            </NavigationView>
 
-            <Frame x:Name="Content" Grid.Column="1" Padding="20,0,20,16" />
+            <Frame x:Name="Content" Grid.Column="1" Padding="24,0,24,20" />
         </Grid>
 
         <!-- 状态栏 -->
         <Border Grid.Row="2" BorderThickness="0,1,0,0"
                 BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}">
-            <TextBlock x:Name="Status" Padding="20,8" Opacity="0.75"
+            <TextBlock x:Name="Status" Padding="24,9" Opacity="0.7"
                        TextTrimming="CharacterEllipsis" Text="就绪" />
         </Border>
     </Grid>
