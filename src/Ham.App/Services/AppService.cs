@@ -80,9 +80,11 @@ public sealed class AppService
     /// </summary>
     public ICasLoginProvider? CasLogin { get; set; }
 
-    public GpaScale GpaScale =>
-        GpaScale.Presets.FirstOrDefault(s => s.Name == Settings.GpaScaleName)
-        ?? GpaScale.Standard4_0;
+    /// <summary>
+    /// 当前生效的绩点口径。与 WinUI 3 共用 <see cref="GpaScale.Resolve"/>，
+    /// 两边不允许各自选表。
+    /// </summary>
+    public GpaScale GpaScale => GpaScale.Resolve(Settings.GpaScaleName);
 
     public ComprehensiveScoreMethod ComprehensiveMethod =>
         Enum.TryParse<ComprehensiveScoreMethod>(Settings.ComprehensiveMethod, out var m)

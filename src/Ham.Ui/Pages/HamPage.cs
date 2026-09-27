@@ -124,6 +124,60 @@ public abstract class HamPage : Page
         Content = new ScrollViewer { Content = root };
     }
 
+    /// <summary>
+    /// 一个带标题的下拉选择器。
+    /// </summary>
+    /// <remarks>
+    /// WinUI 3 原本只有只读设置页，绩点口径这类关键选项改不了，
+    /// 于是界面和 WPF 版能力不等价。这里补上通用控件。
+    /// <para>
+    /// <b>初始化顺序是有意的</b>：先在对象初始化器里设好 <c>SelectedIndex</c>，
+    /// 再挂 <c>SelectionChanged</c>，这样构造过程中不会回调一次，
+    /// 否则刚打开页面就会把设置白写一遍。
+    /// </para>
+    /// </remarks>
+    protected static ComboBox Choice(
+        IReadOnlyList<string> options, int selectedIndex, Action<int> onChanged)
+    {
+        var box = new ComboBox
+        {
+            ItemsSource = options,
+            SelectedIndex = selectedIndex,
+            MinWidth = 240,
+            HorizontalAlignment = HorizontalAlignment.Left,
+        };
+
+        box.SelectionChanged += (_, _) =>
+        {
+            if (box.SelectedIndex >= 0) onChanged(box.SelectedIndex);
+        };
+
+        return box;
+    }
+
+    /// <summary>「标题 + 控件」一行。</summary>
+    /// <param name="control">
+    /// 必须是 <see cref="FrameworkElement"/>——<c>Grid.SetColumn</c> 只接受
+    /// FrameworkElement，传 UIElement 编译不过。
+    /// </param>
+    protected static Grid LabelledRow(string label, FrameworkElement control)
+    {
+        var g = new Grid { ColumnSpacing = 12 };
+        g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(96) });
+        g.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var l = Body(label, 0.65);
+        l.FontSize = 13;
+        l.VerticalAlignment = VerticalAlignment.Center;
+        Grid.SetColumn(l, 0);
+
+        Grid.SetColumn(control, 1);
+
+        g.Children.Add(l);
+        g.Children.Add(control);
+        return g;
+    }
+
     /// <summary>统一的「去 WPF 版同步」指引。</summary>
     protected static Border SyncHint(string what) => SourceNote(
         $"尚未同步{what}。\n"

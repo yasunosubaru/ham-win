@@ -2,12 +2,20 @@
 bin/
 obj/
 publish/
+## WinUI 3 的发布目录叫 pub/（不是 publish/）—— 两者都要拦。
+## 漏掉它会把 200+ 个 Windows SDK 产物（winmd / pri / 各语言 mui）推进仓库。
+pub/
 *.user
 *.suo
 .vs/
 *.dll
 *.exe
 *.pdb
+## WinUI 3 / WindowsAppSDK 的资源与元数据产物，任何路径下都不入库
+*.winmd
+*.pri
+*.mui
+*.xbf
 
 ## 测试
 TestResults/

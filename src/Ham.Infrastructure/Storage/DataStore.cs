@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Ham.Core.Models;
 
 namespace Ham.Infrastructure.Storage;
 
@@ -20,7 +21,11 @@ public sealed class AppSettings
     public string SemesterStartDate { get; set; } = DateTime.Now.ToString("yyyy-MM-dd");
     public int TotalWeeks { get; set; } = 20;
 
-    public string GpaScaleName { get; set; } = "Standard 4.0";
+    // 默认值必须**恰好等于** GpaScale.Standard4_0.Name。
+    // 原来写的是字面量 "Standard 4.0"（英文），而预设名是中文的「标准 4.0 制」，
+    // 于是按名字查找永远匹配不上——只是因为回落分支恰好也是 Standard4_0
+    // 才一直没暴露出来。改成直接引用，杜绝这类漂移。
+    public string GpaScaleName { get; set; } = GpaScale.Standard4_0.Name;
     public string ComprehensiveMethod { get; set; } = "NewF2";
     public string? CustomB2CourseIds { get; set; }
     public string? SelectedScoreCalcScriptId { get; set; }

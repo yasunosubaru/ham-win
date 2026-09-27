@@ -44,7 +44,25 @@ public sealed class StatusPage : HamPage
             SourceNote("天气来自 Open-Meteo 公共 API（无需认证）。"
                     + "教务、图书馆数据来自 WPF 版同步后写入的 appdata.json。"));
 
+        // 没有天气时立刻给出说明。以前这里只写 if (State.Weather is { } w) Apply(w)，
+        // 于是网络不通就摆两张**空卡片**——标题写着「实时天气」「未来三天」，
+        // 底下什么都没有，看着像坏了。
         if (State.Weather is { } w) Apply(w);
+        else ShowWeatherUnavailable();
+    }
+
+    /// <summary>天气还没拿到（或拿失败）时的占位说明。</summary>
+    public void ShowWeatherUnavailable(string? reason = null)
+    {
+        _now.Text = "暂未获取";
+        _now.FontSize = 22;
+        _detail.Text = reason is null
+            ? "正在获取珞珈山实时天气…\n若长时间无变化，多半是网络不可达；点右侧「刷新」重试。"
+            : reason;
+        _detail.Opacity = 0.75;
+
+        _forecast.Children.Clear();
+        _forecast.Children.Add(Body("暂无预报数据。", 0.7));
     }
 
     private UIElement BuildSyncOverview()
@@ -65,6 +83,8 @@ public sealed class StatusPage : HamPage
 
     public void Apply(WeatherReport r)
     {
+        // 复位：ShowWeatherUnavailable 把字号调小了，拿到真数据后要还原
+        _now.FontSize = 28;
         _now.Text = $"{r.Condition}  {r.TemperatureText}";
         _detail.Text =
             $"体感 {r.FeelsLikeCelsius:F0}°C · 湿度 {r.HumidityPercent}% · {r.WindDirection} {r.WindSpeedKmh:F1} km/h"
@@ -105,9 +125,20 @@ public sealed class CoursePage : HamPage
 
     private UIElement BuildGrid(IReadOnlyList<Course> courses)
     {
-        var grid = new Grid { RowSpacing = 8, ColumnSpacing = 10 };
-        for (var i = 0; i < 7; i++)
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        var grid = new Grid { RowSpacing = 6, ColumnSpacing = 8 };
+
+        for (var d = 0; d < 7; d++)
+        {
+            grid.ColumnDefinitions.Add(new ColumnDefinition
+            {
+                Width = new GridLength(1, GridUnitType.Star),
+                // 窄窗口下不要把七列压扁——课名会挤成一团、右侧直接被裁掉。
+                // 有了 MinWidth，外层 ScrollViewer 才会出现横向滚动条。
+                MinWidth = 150,
+            });
+        }
+
+        // 行 0 是星期表头，行 1..7 对应起始节次。
         for (var r = 0; r < 8; r++)
             grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
 
@@ -124,43 +155,89 @@ public sealed class CoursePage : HamPage
             grid.Children.Add(h);
         }
 
-        foreach (var c in courses)
+        // 关键：同一「星期 × 起始节次」的课必须收进**同一个格子**。
+        // 以前每门课各自作为并列子元素被塞进相同的 row/column，坐标完全一致，
+        // 于是几个课名被画在同一位置，叠成「张翠余极想郑伸四特色社会主义理论概论」
+        // 那样的一团；1-2 节的课也只占一行，看不出它连上两节。
+        var slots = courses
+            .GroupBy(c => (Day: Math.Clamp(c.Weekday - 1, 0, 6), From: Math.Clamp(c.ClassFrom, 1, 7)))
+            .OrderBy(g => g.Key.Day)
+            .ThenBy(g => g.Key.From);
+
+        foreach (var slot in slots)
         {
-            var col = Math.Clamp(c.Weekday - 1, 0, 6);
-            var row = Math.Clamp(c.ClassFrom, 1, 7);
-
-            var tb = new TextBlock
-            {
-                Text = c.Name,
-                FontSize = 12,
-                FontWeight = FontWeights.SemiBold,
-                TextWrapping = TextWrapping.Wrap,
-            };
-            var sub = new TextBlock
-            {
-                Text = $"{c.ClassFrom}-{c.ClassTo}节\n{c.Location}",
-                FontSize = 10,
-                Opacity = 0.7,
-                TextWrapping = TextWrapping.Wrap,
-            };
-
-            var cell = new StackPanel { Spacing = 1, Margin = new Thickness(2) };
-            cell.Children.Add(tb);
-            cell.Children.Add(sub);
+            var stack = new StackPanel { Spacing = 4 };
+            foreach (var c in slot.OrderBy(c => c.ClassTo).ThenBy(c => c.Name, StringComparer.Ordinal))
+                stack.Children.Add(CourseChip(c));
 
             var border = new Border
             {
-                Child = cell,
+                Child = stack,
                 Background = SubtleFill,
                 CornerRadius = new CornerRadius(6),
                 Padding = new Thickness(6, 4, 6, 4),
             };
-            Grid.SetColumn(border, col);
-            Grid.SetRow(border, row);
+
+            Grid.SetColumn(border, slot.Key.Day);
+            Grid.SetRow(border, slot.Key.From);
+
+            // 刻意**不**用 Grid.SetRowSpan。
+            // 跨行 + Auto 行高在 WinUI 里会踩这个坑：行高是按同一行**其它列**的内容
+            // 算出来的，跨行子元素分不到足够高度，StackPanel 里的课就溢出并互相压字
+            // （实测周一 6-8 节、周三 6-8 节都糊成一团）。
+            // 改成「按起始节次落格 + 每门课有 MinHeight」：
+            // 行高由该格 StackPanel 的实际内容撑开，结构上不可能重叠。
+            // 连上几节的信息由 CourseChip 里的「1-2节」文字承担。
+
             grid.Children.Add(border);
         }
 
-        return grid;
+        return new ScrollViewer
+        {
+            Content = grid,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollMode = ScrollMode.Auto,
+            // 纵向滚动交给页面最外层的 ScrollViewer，这里必须禁掉，
+            // 否则鼠标滚轮在内嵌区域里滚不动整页。
+            VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            VerticalScrollMode = ScrollMode.Disabled,
+        };
+    }
+
+    /// <summary>课表格子里的一门课。</summary>
+    private static UIElement CourseChip(Course c)
+    {
+        var name = new TextBlock
+        {
+            Text = c.Name,
+            FontSize = 12,
+            FontWeight = FontWeights.SemiBold,
+            TextWrapping = TextWrapping.Wrap,
+        };
+
+        var period = c.ClassFrom == c.ClassTo
+            ? $"{c.ClassFrom}节"
+            : $"{c.ClassFrom}-{c.ClassTo}节";
+        var meta = new TextBlock
+        {
+            Text = $"{period} · {c.Location}",
+            FontSize = 10,
+            Opacity = 0.7,
+            TextWrapping = TextWrapping.Wrap,
+        };
+
+        var inner = new StackPanel { Spacing = 1 };
+        inner.Children.Add(name);
+        inner.Children.Add(meta);
+
+        // 固定最小高度：单门课的格子也要有块头，
+        // 且高度可预期，行高计算才稳定。
+        return new Border
+        {
+            Child = inner,
+            MinHeight = 46,
+            Padding = new Thickness(2, 0, 2, 0),
+        };
     }
 
     private static UIElement BuildDetail(IReadOnlyList<Course> courses)
@@ -245,7 +322,7 @@ public sealed class SchedulePage : HamPage
     }
 }
 
-/// <summary>成绩页：真实成绩 + 武大 4.0 制绩点。</summary>
+/// <summary>成绩页：真实成绩 + 可切换的绩点口径。</summary>
 public sealed class ScorePage : HamPage
 {
     public ScorePage(AppState state) : base(state)
@@ -256,21 +333,25 @@ public sealed class ScorePage : HamPage
         if (records.Count == 0)
         {
             blocks.Add(SyncHint("成绩"));
-            blocks.Add(Card(Body(
-                "成绩查询需要图形验证码（sfxyyzm=1 → popupCaptcha）。\n"
-                + "该验证码由顶象 SDK 提供，校方明确作为反自动化手段，"
-                + "本应用不做绕过，只在你手动完成验证后读取结果。"), "为什么需要手动验证"));
+            // 这段说明以前写的是「需要图形验证码，本应用不做绕过」——
+            // 那是当时的结论，现已不成立：实测服务端只校验 validate 非空，
+            // 滑块是纯客户端的一道门。留着旧文案会让用户以为必须手动过验证码。
         }
         else
         {
-            var scale = GpaScale.Whu4_0;
+            // 口径由设置决定，与 WPF 走同一个解析入口。
+            // 原来这里硬编码 Whu4_0，导致同一份 27 门课 WinUI 显示 3.68、
+            // WPF 显示 3.222——界面上同时出现两个 GPA 比算错更糟。
+            var scale = GpaScale.Resolve(State.Settings.GpaScaleName);
             blocks.Add(Card(new StackPanel
             {
                 Children =
                 {
                     Field("门数", records.Count.ToString()),
-                    Field("加权均分", ScoreCalculator.WeightedAverage(records).ToString("F1")),
-                    Field("GPA", ScoreCalculator.Gpa(records, scale).ToString("F2")),
+                    Field("加权均分", ScoreCalculator.WeightedAverage(records).ToString("F2")),
+                    // F3 与 WPF 版 ScoreViewModel.GpaText 一致；
+                    // 两边显示位数不同会让同一个人以为自己有两个 GPA。
+                    Field("GPA", ScoreCalculator.Gpa(records, scale).ToString("F3")),
                     Field("绩点口径", scale.Name),
                     Field("已获学分", ScoreCalculator.EarnedCredit(records).ToString("F1")),
                 },
@@ -299,7 +380,7 @@ public sealed class ScorePage : HamPage
         }
 
         blocks.Add(SourceNote("成绩由教务系统成绩页解析而来。绩点换算采用 "
-            + GpaScale.Whu4_0.Name + "（60 分计 1.5 绩点，90 分计 4.0）。"));
+            + GpaScale.Resolve(State.Settings.GpaScaleName).Description + "（可在设置中切换口径）。"));
         Compose("成绩", blocks.ToArray());
     }
 }
@@ -390,6 +471,46 @@ public sealed class SettingsPage : HamPage
     public SettingsPage(AppState state) : base(state)
     {
         var s = State.Settings;
+        var presets = GpaScale.Presets;
+
+        // 展示的是**解析后的**口径名，不是存储里的原始字符串。
+        // 存储里可能是历史遗留的英文 "Standard 4.0"，直接显示会让人以为出了错。
+        var current = GpaScale.Resolve(s.GpaScaleName);
+        var selected = Math.Max(0, presets.ToList().FindIndex(p => p.Name == current.Name));
+
+        // 先声明说明文字：lambda 里要用到它，必须在词法上先于引用出现。
+        var scaleNote = new TextBlock
+        {
+            Text = "改动会立即写回 appdata.json，并同时影响 WPF 版的成绩页。",
+            FontSize = 12,
+            Opacity = 0.75,
+            TextWrapping = TextWrapping.Wrap,
+        };
+
+        var scaleBox = Choice(
+            presets.Select(p => $"{p.Name} — {p.Description}").ToList(),
+            selected,
+            async i =>
+            {
+                s.GpaScaleName = presets[i].Name;
+                try
+                {
+                    // 走 AppState 已有的写盘路径（DataStore 原子写入），
+                    // 不要在 UI 层自己碰文件。
+                    await State.SaveSettingsAsync();
+                }
+                catch (Exception ex)
+                {
+                    // 写盘失败必须让用户知道，否则他以为改成功了
+                    scaleNote.Text = "⚠ 保存失败：" + ex.Message;
+                    scaleNote.Opacity = 1.0;
+                    return;
+                }
+
+                scaleNote.Text = "已保存。WPF 版同步使用此口径——两个界面读同一份 appdata.json。";
+                scaleNote.Opacity = 1.0;
+            });
+
         var blocks = new List<UIElement>
         {
             Card(new StackPanel
@@ -404,9 +525,11 @@ public sealed class SettingsPage : HamPage
             }, "学期"),
             Card(new StackPanel
             {
+                Spacing = 8,
                 Children =
                 {
-                    Field("绩点口径", s.GpaScaleName),
+                    LabelledRow("绩点口径", scaleBox),
+                    scaleNote,
                     Field("课程提前提醒", s.EnableCourseReminder ? $"{s.CourseReminderMinutes} 分钟" : "关闭"),
                     Field("日程提醒", s.EnableScheduleReminder ? "开启" : "关闭"),
                     Field("通知总开关", s.EnableNotifications ? "开启" : "关闭"),
@@ -422,9 +545,9 @@ public sealed class SettingsPage : HamPage
                     Field("版本", "Ham.Ui · WinUI 3"),
                 },
             }, "关于"),
-            SourceNote("本页面读取的设置与 WPF 版是同一份 appdata.json，"
-                + "两边改动会互相覆盖。设置项的编辑界面仍在 WPF 版中，"
-                + "因为写盘要经过已验证的 DataStore 原子写入路径。"),
+            SourceNote("本页面读写的设置与 WPF 版是同一份 appdata.json，两边会互相覆盖。"
+                + "学期、提醒、通知等选项的编辑界面仍在 WPF 版里；"
+                + "绩点口径已在此可直接切换，写盘同样经过 DataStore 的原子写入路径。"),
         };
 
         Compose("设置", blocks.ToArray());

@@ -21,8 +21,12 @@ public class ScoreCalculatorTests
     public void GpaUsesScaleBands()
     {
         var records = new[] { S("A", 3, 95), S("B", 3, 85) };
-        // 标准 4.0: 95→4.0, 85→3.0 → (3*4 + 3*3)/6 = 3.5
-        Assert.Equal(3.5, ScoreCalculator.Gpa(records, GpaScale.Standard4_0), 6);
+        // 标准 4.0 九档: 95→4.0, 85→3.7 → (3*4.0 + 3*3.7)/6 = 23.1/6 = 3.85
+        // （旧的四档表给 85→3.0，算出 3.5；那是错的，见 StandardScaleBands 的说明）
+        Assert.Equal(3.85, ScoreCalculator.Gpa(records, GpaScale.Standard4_0), 6);
+
+        // 同一份成绩在四档口径下确实才是 3.5——两张表并存，所以这里钉住差异
+        Assert.Equal(3.5, ScoreCalculator.Gpa(records, GpaScale.Coarse4Tier), 6);
     }
 
     [Fact]
@@ -78,6 +82,40 @@ public class ScoreCalculatorTests
         Assert.Equal(1, buckets[6].Count);   // 60-69
     }
 
+    /// <summary>
+    /// 默认口径是通行的<b>九档</b> 4.0 制。
+    /// </summary>
+    /// <remarks>
+    /// 这组用例以前断言的是 90/80/70/60 <b>四档</b>（89→3.0、79→2.0、69→1.0），
+    /// 而那个四档表当时被命名为「标准 4.0 制」并设为默认。
+    /// 名字、文档与实现三者对不上，导致同一份 27 门真实成绩在两个 UI 上
+    /// 分别显示 3.222 与 3.68。现已改正，期望值随之更新。
+    /// 四档口径的行为改由 <see cref="CoarseScaleBands"/> 单独钉住。
+    /// </remarks>
+    [Theory]
+    [InlineData(95, 4.0)]
+    [InlineData(90, 4.0)]
+    [InlineData(89, 3.7)]
+    [InlineData(85, 3.7)]
+    [InlineData(84, 3.3)]
+    [InlineData(82, 3.3)]
+    [InlineData(80, 3.0)]
+    [InlineData(78, 3.0)]
+    [InlineData(76, 2.7)]
+    [InlineData(75, 2.7)]
+    [InlineData(73, 2.3)]
+    [InlineData(72, 2.3)]
+    [InlineData(70, 2.0)]
+    [InlineData(68, 2.0)]
+    [InlineData(66, 1.5)]
+    [InlineData(64, 1.5)]
+    [InlineData(62, 1.0)]
+    [InlineData(60, 1.0)]
+    [InlineData(59, 0.0)]
+    public void StandardScaleBands(double score, double expected)
+        => Assert.Equal(expected, GpaScale.Standard4_0.ToGradePoint(score), 6);
+
+    /// <summary>四档粗放口径：仍可选，但不再是默认，且名字已与标准表区分开。</summary>
     [Theory]
     [InlineData(95, 4.0)]
     [InlineData(90, 4.0)]
@@ -88,8 +126,35 @@ public class ScoreCalculatorTests
     [InlineData(69, 1.0)]
     [InlineData(60, 1.0)]
     [InlineData(59, 0.0)]
-    public void StandardScaleBands(double score, double expected)
-        => Assert.Equal(expected, GpaScale.Standard4_0.ToGradePoint(score), 6);
+    public void CoarseScaleBands(double score, double expected)
+        => Assert.Equal(expected, GpaScale.Coarse4Tier.ToGradePoint(score), 6);
+
+    /// <summary>
+    /// 口径解析必须单一来源：名字对不上就回落默认，且历史英文值要显式兼容。
+    /// </summary>
+    /// <remarks>
+    /// 早期 <c>AppSettings.GpaScaleName</c> 的默认值写成英文 <c>"Standard 4.0"</c>，
+    /// 与预设名「标准 4.0 制」永远匹配不上，只是碰巧回落到同一张表才没暴露。
+    /// </remarks>
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("Standard 4.0")]          // 历史遗留值
+    [InlineData("根本不存在的口径")]
+    public void ResolveFallsBackToStandardScale(string? name)
+        => Assert.Same(GpaScale.Standard4_0, GpaScale.Resolve(name));
+
+    [Fact]
+    public void ResolveHonoursAPresetName()
+        => Assert.Same(GpaScale.Whu4_0, GpaScale.Resolve("武汉大学 4.0 制"));
+
+    [Fact]
+    public void DefaultScaleNameActuallyMatchesItsPreset()
+    {
+        // 这个断言是为了让"默认值必须是某个真实预设的名字"变成编译期之外也守得住的约束
+        var settings = new Ham.Infrastructure.Storage.AppSettings();
+        Assert.Same(GpaScale.Standard4_0, GpaScale.Resolve(settings.GpaScaleName));
+    }
 
     [Fact]
     public void LinearFormulaScale()

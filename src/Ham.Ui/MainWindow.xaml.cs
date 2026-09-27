@@ -79,10 +79,27 @@ public sealed partial class MainWindow : Window
                           + "　|　" + _state.SyncSummary;
             if (Content.Content is StatusPage sp) sp.Apply(report);
         }
+        catch (HttpRequestException)
+        {
+            // 状态栏只有一行位置，直接把 .NET 的英文异常原文（常常还带
+            // "see inner exception"）糊上去既难看又没信息量。
+            Fail("天气获取失败：网络不可达", "取不到实时天气，通常是网络问题。点「刷新」可重试。");
+        }
+        catch (TaskCanceledException)
+        {
+            Fail("天气获取超时", "请求超时，通常是网络问题。点「刷新」可重试。");
+        }
         catch (Exception ex)
         {
-            Status.Text = "天气获取失败：" + ex.Message;
+            Fail("天气获取失败", ex.Message);
         }
+    }
+
+    /// <summary>天气失败的统一处理：状态栏给一行摘要，页面里给可读的说明。</summary>
+    private void Fail(string status, string? pageHint)
+    {
+        Status.Text = status + (_state.Weather is null ? "" : "（已沿用上次结果）");
+        if (Content.Content is StatusPage sp) sp.ShowWeatherUnavailable(pageHint);
     }
 
     private void UpdateTerm()
