@@ -1,0 +1,40 @@
+## .NET
+bin/
+obj/
+publish/
+*.user
+*.suo
+.vs/
+*.dll
+*.exe
+*.pdb
+
+## 测试
+TestResults/
+*.trx
+
+## 运行时数据（**含真实教务数据与凭据，绝不能进版本库**）
+appdata.json
+*.corrupt-*
+logs/
+*.log
+.env
+.env.*
+!.env.example
+
+## 侦察产物
+## bfs-cache.json 是爬虫的页面缓存（~1.1 MB 第三方 HTML），可由 crawl-jwgl.mjs 重新生成。
+## contract.json / REPORT.md 是提炼后的契约结论，保留入库。
+tools/recon/out/bfs-cache.json
+tools/recon/out/scores-real.json
+tools/recon/out/*.html
+
+## 已损坏、未纳入 solution 的实验工具
+## CasLoginHarness/Program.cs 存在语法错误（unterminated string / invalid 'is'），
+## 早于本仓库迁出前就已损坏，且不在 Ham.slnx 中，故不入库。
+tools/CasLoginHarness/
+
+## 编辑器
+.idea/
+.vscode/
+*.swp

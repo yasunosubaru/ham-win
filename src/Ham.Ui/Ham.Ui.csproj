@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>Ham.Ui</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <UseWinUI>true</UseWinUI>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+
+    <!--
+      unpackaged 运行：不打 MSIX，直接 exe 启动。
+      代价是没有包身份，因此不能使用需要身份的功能（通知的部分 API、某些文件选择器）。
+      现有功能（课表/成绩/天气/课表看板）在 unpackaged 下均可工作。
+    -->
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>false</PublishSingleFile>
+
+    <!--
+      CS0108 只来自 WinUI 的 XAML 代码生成器：它为 x:Class="MainWindow" 生成
+      public object Content，而 Window 基类已有 Content，于是报"隐藏继承的成员"。
+      生成的代码不在本仓库里，也无法加 new，故按警告号精确屏蔽。
+      不要改成 NoWarn 全局关闭，那会连带藏掉本项目自己的隐藏成员问题。
+    -->
+    <NoWarn>$(NoWarn);CS0108</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.250606001" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.1742" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      业务逻辑与数据层原样复用，不做任何改写。
+      迁移只发生在 UI 层：Ham.Core / Ham.Infrastructure 与 WPF 版完全一致，
+      因此课表解析、成绩解析、GPA 计算、天气、持久化等行为完全相同。
+    -->
+    <ProjectReference Include="..\Ham.Core\Ham.Core.csproj" />
+    <ProjectReference Include="..\Ham.Infrastructure\Ham.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

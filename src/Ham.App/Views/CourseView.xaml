@@ -1,0 +1,249 @@
+<UserControl x:Class="Ham.App.Views.CourseView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:vm="clr-namespace:Ham.App.ViewModels"
+             mc:Ignorable="d"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- 工具栏 -->
+        <Border Grid.Row="0" Style="{StaticResource CardStyle}" Margin="0,0,0,12" Padding="12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Orientation="Horizontal" Grid.Column="0">
+                    <Button Content="上一周" Style="{StaticResource GhostButtonStyle}"
+                            Command="{Binding PreviousWeekCommand}" Margin="0,0,6,0" />
+                    <Button Content="下一周" Style="{StaticResource GhostButtonStyle}"
+                            Command="{Binding NextWeekCommand}" />
+                </StackPanel>
+
+                <TextBlock Grid.Column="1" Margin="16,0" VerticalAlignment="Center" FontSize="13.5"
+                           FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}">
+                    <Run Text="第" /><Run Text="{Binding CurrentWeek, Mode=OneWay}" /><Run Text="周 / 共" />
+                    <Run Text="{Binding TotalWeeks, Mode=OneWay}" /><Run Text="周" />
+                </TextBlock>
+
+                <TextBox Grid.Column="2" Height="30" VerticalAlignment="Center" MaxWidth="220"
+                         HorizontalAlignment="Left"
+                         Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged, Delay=200}" />
+
+                <StackPanel Grid.Column="3" Orientation="Horizontal" Margin="0,0,8,0">
+                    <CheckBox Content="显示全学期" IsChecked="{Binding ShowAllWeeks}" Margin="0,0,12,0" />
+                    <Button Content="回到本周" Style="{StaticResource GhostButtonStyle}"
+                            Command="{Binding TodayCommand}" Margin="0,0,6,0" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="4" Orientation="Horizontal">
+                    <Button Content="检测冲突" Style="{StaticResource GhostButtonStyle}"
+                            Command="{Binding DetectConflictsCommand}" Margin="0,0,6,0" />
+                    <Button Content="编辑所选" Style="{StaticResource GhostButtonStyle}"
+                            Command="{Binding EditSelectedCommand}" Margin="0,0,6,0" />
+                    <Button Content="添加课程" Style="{StaticResource PrimaryButtonStyle}"
+                            Command="{Binding AddCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="300" />
+            </Grid.ColumnDefinitions>
+
+            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" Margin="0,0,12,0">
+                <ItemsControl ItemsSource="{Binding Days}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Columns="7" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="3" Background="{DynamicResource SurfaceBrush}"
+                                    BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="1"
+                                    CornerRadius="8" Padding="6" MinHeight="220">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}" FontSize="12.5" FontWeight="SemiBold"
+                                               HorizontalAlignment="Center" Margin="0,0,0,6">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                                        <Setter Property="Foreground" Value="{DynamicResource BrandBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+
+                                    <ItemsControl ItemsSource="{Binding Courses}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="{Binding Color, Converter={StaticResource HexToBrush}}"
+                                                        CornerRadius="5" Padding="7,6" Margin="0,0,0,5"
+                                                        Cursor="Hand" MouseLeftButtonUp="CourseCard_Click">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="BorderThickness" Value="0" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Value="True"
+                                                                     Binding="{Binding DataContext.Selected,
+                                                       RelativeSource={RelativeSource AncestorType=ItemsControl}}">
+                                                                    <Setter Property="BorderBrush" Value="{DynamicResource BrandBrush}" />
+                                                                    <Setter Property="BorderThickness" Value="2" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Name}" FontSize="11.5" FontWeight="SemiBold"
+                                                                   TextWrapping="Wrap" />
+                                                        <TextBlock FontSize="10" TextWrapping="Wrap" Margin="0,2,0,0">
+                                                            <Run Text="{Binding ClassFrom, Mode=OneWay}" />
+                                                            <Run Text="-" />
+                                                            <Run Text="{Binding ClassTo, Mode=OneWay}" />
+                                                            <Run Text="节 " />
+                                                            <Run Text="{Binding Location, Mode=OneWay}" />
+                                                        </TextBlock>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <TextBlock Text="—" HorizontalAlignment="Center" Margin="0,10,0,0"
+                                               Style="{StaticResource MutedTextStyle}"
+                                               Visibility="{Binding CourseCount, Converter={StaticResource CountToVisibility}, ConverterParameter=Empty}" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- 右栏：详情 / 编辑 / 冲突 -->
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12"
+                            Visibility="{Binding Selected, Converter={StaticResource NullToVisibility}, ConverterParameter=Inverse}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource CardTitleStyle}" Text="课程详情" />
+                            <TextBlock Text="{Binding SelectedDetail}" FontSize="12.5" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <Button Content="删除该课程" Style="{StaticResource GhostButtonStyle}"
+                                    Command="{Binding DeleteCommand}" Margin="0,10,0,0"
+                                    HorizontalAlignment="Left" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12"
+                            Visibility="{Binding Selected, Converter={StaticResource NullToVisibility}, ConverterParameter=Inverse}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource CardTitleStyle}" Text="关联日程" />
+                            <ItemsControl ItemsSource="{Binding SelectedSchedules}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock FontSize="12" Margin="0,0,0,4"
+                                                   Foreground="{DynamicResource TextPrimaryBrush}"
+                                                   Text="{Binding Title}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Text="该课程暂无关联日程。" Style="{StaticResource MutedTextStyle}"
+                                       Visibility="{Binding SelectedSchedules.Count, Converter={StaticResource CountToVisibility}, ConverterParameter=Empty}" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 编辑面板 -->
+                    <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12"
+                            Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel DataContext="{Binding Editor}">
+                            <TextBlock Style="{StaticResource CardTitleStyle}" Text="编辑课程" />
+                            <TextBlock Text="名称" Style="{StaticResource SectionHeaderStyle}" />
+                            <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Text="课头号" Style="{StaticResource SectionHeaderStyle}" Margin="0,8,0,4" />
+                            <TextBox Text="{Binding CourseId, UpdateSourceTrigger=PropertyChanged}" />
+                            <Grid Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="10" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="教师" Style="{StaticResource SectionHeaderStyle}" />
+                                    <TextBox Text="{Binding Instructor, UpdateSourceTrigger=PropertyChanged}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="地点" Style="{StaticResource SectionHeaderStyle}" />
+                                    <TextBox Text="{Binding Location, UpdateSourceTrigger=PropertyChanged}" />
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="周次（如 1-17周、1-17周(单)）" Style="{StaticResource SectionHeaderStyle}" Margin="0,8,0,4" />
+                            <TextBox Text="{Binding WeekText, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Text="{Binding ParsedWeeksHint}" Style="{StaticResource MutedTextStyle}"
+                                       Margin="0,4,0,0" />
+                            <Grid Margin="0,8,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="10" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="10" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="星期" Style="{StaticResource SectionHeaderStyle}" />
+                                    <ComboBox ItemsSource="{Binding Weekdays}" SelectedItem="{Binding Weekday}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Text="起始节" Style="{StaticResource SectionHeaderStyle}" />
+                                    <ComboBox ItemsSource="{Binding Periods}" SelectedItem="{Binding ClassFrom}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="4">
+                                    <TextBlock Text="结束节" Style="{StaticResource SectionHeaderStyle}" />
+                                    <ComboBox ItemsSource="{Binding Periods}" SelectedItem="{Binding ClassTo}" />
+                                </StackPanel>
+                            </Grid>
+                            <TextBlock Text="课程性质" Style="{StaticResource SectionHeaderStyle}" Margin="0,8,0,4" />
+                            <ComboBox ItemsSource="{Binding CourseTypes}" SelectedItem="{Binding CourseType}" />
+                            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                <Button Content="保存" Style="{StaticResource PrimaryButtonStyle}"
+                                        Command="{Binding DataContext.SaveCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        Margin="0,0,8,0" />
+                                <Button Content="取消" Style="{StaticResource GhostButtonStyle}"
+                                        Command="{Binding DataContext.CancelCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource CardStyle}"
+                            Visibility="{Binding Conflicts.Count, Converter={StaticResource CountToVisibility}}">
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource CardTitleStyle}" Text="课程冲突" />
+                            <ItemsControl ItemsSource="{Binding Conflicts}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Describe()}" FontSize="11.5" TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource DangerBrush}" Margin="0,0,0,5" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>

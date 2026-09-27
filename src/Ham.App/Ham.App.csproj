@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <!--
+      目标框架必须带 Windows SDK 版本号（10.0.19041.0），否则拿不到
+      Windows.UI.Notifications 的 WinRT 投影，无法发送原生 Toast 通知。
+    -->
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <UseWPF>true</UseWPF>
+    <!--
+      刻意不启用 UseWindowsForms：它会注入 System.Windows.Forms 全局 using，
+      与 WPF 的 UserControl/RadioButton/Timer 等类型全面二义。
+      通知兜底所需的 NotifyIcon 在本文件内局部 using 即可
+      （UseWPF 已引用 WindowsDesktop 框架，其中包含 WinForms 程序集）。
+    -->
+    <RootNamespace>Ham.App</RootNamespace>
+    <AssemblyName>Ham</AssemblyName>
+    <ApplicationIcon>Assets\ham.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+
+    <!--
+      单文件发布。写进项目文件而不是靠命令行传 -p:PublishSingleFile，
+      否则直接 `dotnet publish` 会退化成 13 个文件、165 MB 的文件夹，
+      比原来的 72.7 MB 单文件大一倍还多。
+      IncludeNativeLibrariesForSelfExtract 是关键：不含它时原生库会散在 exe 旁边，
+      PublishSingleFile 形同虚设。
+      注意：WebView2Loader.dll 属于内容文件，不会被打进 exe，
+      运行时由 WebView2 固定版本或已装的 Edge WebView2 Runtime 提供。
+    -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      只引入 WinForms 程序集（NotifyIcon 兜底），不启用 UseWindowsForms，
+      避免它注入 System.Windows.Forms 全局 using 与 WPF 类型二义。
+    -->
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ham.Core\Ham.Core.csproj" />
+    <ProjectReference Include="..\Ham.Infrastructure\Ham.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\ham.ico" />
+  </ItemGroup>
+
+</Project>

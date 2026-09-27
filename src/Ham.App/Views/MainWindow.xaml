@@ -1,0 +1,134 @@
+<Window x:Class="Ham.App.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:Ham.App.ViewModels"
+        xmlns:views="clr-namespace:Ham.App.Views"
+        Title="Ham" Height="840" Width="1300"
+        MinHeight="640" MinWidth="1040"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource AppBackgroundBrush}"
+        FontFamily="{StaticResource AppFontFamily}"
+        TextOptions.TextFormattingMode="Display">
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="212" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- 侧边导航 -->
+        <Border Grid.Column="0" Background="{DynamicResource NavBackgroundBrush}"
+                BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="0,0,1,0">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Margin="16,18,16,14" Orientation="Horizontal">
+                    <Border Width="30" Height="30" CornerRadius="6"
+                            Background="{DynamicResource BrandBrush}" Margin="0,0,9,0">
+                        <TextBlock Text="H" Foreground="White" FontSize="15" FontWeight="Bold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Ham" FontSize="16" FontWeight="Bold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBlock Text="武汉大学" FontSize="10.5"
+                                   Foreground="{DynamicResource TextMutedBrush}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <ItemsControl x:Name="NavList" DockPanel.Dock="Top" ItemsSource="{Binding NavItems}"
+                              Margin="0,0,0,6">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <RadioButton Style="{StaticResource NavButtonStyle}"
+                                         GroupName="Nav"
+                                         Tag="{Binding Section}"
+                                         Checked="Nav_Checked">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding Icon}" FontSize="14" Width="22"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </RadioButton>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <StackPanel DockPanel.Dock="Bottom" Margin="16,10,16,16">
+                    <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="6" Padding="10">
+                        <StackPanel>
+                            <TextBlock Text="{Binding SourceLabel}" FontSize="11.5"
+                                       Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <TextBlock Text="{Binding SemesterLabel}" FontSize="11"
+                                       Foreground="{DynamicResource TextMutedBrush}"
+                                       Margin="0,3,0,0" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- 主内容 -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- 顶栏 -->
+            <Border Grid.Row="0" Background="{DynamicResource SurfaceBrush}"
+                    BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="0,0,0,1">
+                <StackPanel Orientation="Horizontal" Margin="20,13">
+                    <TextBlock Text="{Binding CurrentIcon}" FontSize="17" Width="26"
+                               VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding CurrentTitle}" FontSize="17" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+            </Border>
+
+            <!-- 演示数据提示条：确保演示数据不会被误认为真实数据 -->
+            <Border Grid.Row="1" Background="#FFF6E5" Padding="20,7"
+                    BorderBrush="#F0D9AE" BorderThickness="0,0,0,1"
+                    Visibility="{Binding IsDemo, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Text="{Binding DemoBanner}" FontSize="11.5" Foreground="#8A5A00" />
+            </Border>
+
+            <ContentControl Grid.Row="2" Margin="20,16,20,12" Content="{Binding}">
+                <ContentControl.Resources>
+                    <DataTemplate DataType="{x:Type vm:MainViewModel}">
+                        <Grid>
+                            <views:StatusView DataContext="{Binding Status}"
+                                Visibility="{Binding DataContext.Current, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NavVisibility}, ConverterParameter=Status}" />
+                            <views:CourseView DataContext="{Binding Course}"
+                                Visibility="{Binding DataContext.Current, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NavVisibility}, ConverterParameter=Course}" />
+                            <views:ScheduleView DataContext="{Binding Schedule}"
+                                Visibility="{Binding DataContext.Current, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NavVisibility}, ConverterParameter=Schedule}" />
+                            <views:ScoreView DataContext="{Binding Score}"
+                                Visibility="{Binding DataContext.Current, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NavVisibility}, ConverterParameter=Score}" />
+                            <views:LibraryView DataContext="{Binding Library}"
+                                Visibility="{Binding DataContext.Current, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NavVisibility}, ConverterParameter=Library}" />
+                            <views:SportView DataContext="{Binding Sport}"
+                                Visibility="{Binding DataContext.Current, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NavVisibility}, ConverterParameter=Sport}" />
+                            <views:BusView DataContext="{Binding Bus}"
+                                Visibility="{Binding DataContext.Current, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NavVisibility}, ConverterParameter=Bus}" />
+                            <views:RatingView DataContext="{Binding Rating}"
+                                Visibility="{Binding DataContext.Current, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NavVisibility}, ConverterParameter=Rating}" />
+                            <views:SettingsView DataContext="{Binding Settings}"
+                                Visibility="{Binding DataContext.Current, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource NavVisibility}, ConverterParameter=Settings}" />
+                        </Grid>
+                    </DataTemplate>
+                </ContentControl.Resources>
+            </ContentControl>
+
+            <!-- 状态栏 -->
+            <Border Grid.Row="3" Background="{DynamicResource SurfaceBrush}"
+                    BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="0,1,0,0"
+                    Padding="20,7">
+                <TextBlock Text="{Binding StatusMessage}" FontSize="11.5"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

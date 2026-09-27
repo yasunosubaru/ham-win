@@ -1,0 +1,98 @@
+<UserControl x:Class="Ham.App.Views.BusView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel MaxWidth="720" HorizontalAlignment="Left">
+            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,14">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Style="{StaticResource CardTitleStyle}" Text="选择站点" />
+                        <TextBlock Style="{StaticResource MutedTextStyle}" Text="{Binding StopHint}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <ComboBox Width="180" ItemsSource="{Binding StopNames}"
+                                  SelectedItem="{Binding StopName}" />
+                        <Button Content="刷新" Style="{StaticResource GhostButtonStyle}"
+                                Command="{Binding RefreshCommand}" Margin="8,0,0,0" Padding="16,6" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,14">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource CardTitleStyle}" Text="实时到站" />
+                    <Border Background="#FFF6E5" CornerRadius="6" Padding="10,7" Margin="0,0,0,10">
+                        <TextBlock FontSize="11.5" Foreground="#8A5A00" TextWrapping="Wrap"
+                                   Text="校巴实时数据依赖校内网络与信息门户会话。当前显示的是按站点生成的示例数据，仅用于展示交互流程。" />
+                    </Border>
+                    <ItemsControl ItemsSource="{Binding Arrivals}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="{DynamicResource SurfaceAltBrush}" CornerRadius="6"
+                                        Padding="14,11" Margin="0,0,0,8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="{Binding LineName}" FontSize="13.5"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource TextPrimaryBrush}" />
+                                            <TextBlock Style="{StaticResource MutedTextStyle}" Margin="0,3,0,0">
+                                                <Run Text="{Binding StopName, Mode=OneWay}" />
+                                                <Run Text=" · " />
+                                                <Run Text="{Binding Direction, Mode=OneWay}" />
+                                            </TextBlock>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center"
+                                                    HorizontalAlignment="Right">
+                                            <TextBlock Text="{Binding MinutesAwayText}"
+                                                       FontSize="19" FontWeight="Bold"
+                                                       Foreground="{DynamicResource BrandBrush}"
+                                                       HorizontalAlignment="Right" />
+                                            <TextBlock Style="{StaticResource MutedTextStyle}"
+                                                       HorizontalAlignment="Right"
+                                                       Text="{Binding RemainingStopsText}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Text="请先在上方选择站点。" Style="{StaticResource MutedTextStyle}"
+                               Visibility="{Binding HasData, Converter={StaticResource InverseBoolToVisibility}}" />
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource CardStyle}">
+                <StackPanel>
+                    <TextBlock Style="{StaticResource CardTitleStyle}" Text="附近站点" />
+                    <ItemsControl ItemsSource="{Binding Stops}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,0,0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" FontSize="12.5" Text="{Binding Name}"
+                                               Foreground="{DynamicResource TextPrimaryBrush}" />
+                                    <TextBlock Grid.Column="1" Style="{StaticResource MutedTextStyle}"
+                                               Text="{Binding Description}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -1,0 +1,249 @@
+<UserControl x:Class="Ham.App.Views.ScoreView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="330" />
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Column="0" Margin="0,0,12,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- 概览 -->
+            <UniformGrid Grid.Row="0" Columns="4" Margin="0,0,0,12">
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,8,0" Padding="14">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="平均学分绩点" />
+                        <TextBlock Text="{Binding GpaText}" FontSize="22" FontWeight="Bold"
+                                   Foreground="{Binding Gpa, Converter={StaticResource ScoreToBrush}, ConverterParameter=Gpa}" />
+                        <TextBlock Style="{StaticResource MutedTextStyle}" Text="{Binding ScaleDescription}"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,8,0" Padding="14">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="加权平均分" />
+                        <TextBlock Text="{Binding WeightedAverageText}" FontSize="22" FontWeight="Bold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBlock Style="{StaticResource MutedTextStyle}" Text="按学分加权" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,8,0" Padding="14">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="综测 F2" />
+                        <TextBlock Text="{Binding ComprehensiveText}" FontSize="22" FontWeight="Bold"
+                                   Foreground="{DynamicResource BrandBrush}" />
+                        <TextBlock Style="{StaticResource MutedTextStyle}" Text="{Binding B2SelectionSummary}"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource CardStyle}" Padding="14">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="学分" />
+                        <TextBlock FontSize="22" FontWeight="Bold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}">
+                            <Run Text="{Binding EarnedCredit, Mode=OneWay, StringFormat=F1}" />
+                            <Run Text="/" />
+                            <Run Text="{Binding TotalCredit, Mode=OneWay, StringFormat=F1}" />
+                        </TextBlock>
+                        <TextBlock Style="{StaticResource MutedTextStyle}" Text="已获 / 修读" />
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <!-- 成绩列表 -->
+            <Border Grid.Row="1" Style="{StaticResource CardStyle}">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Style="{StaticResource SectionHeaderStyle}" Text="成绩列表" VerticalAlignment="Center" />
+                        <TextBlock Style="{StaticResource MutedTextStyle}" VerticalAlignment="Center" Margin="10,0,0,0"
+                                   Text="{Binding EnabledCount, StringFormat='已启用 {0} 门 / 共 '}" />
+                        <TextBlock Style="{StaticResource MutedTextStyle}" VerticalAlignment="Center"
+                                   Text="{Binding TotalCount}" />
+                        <Button Content="全部" Style="{StaticResource GhostButtonStyle}" Margin="14,0,0,0"
+                                Command="{Binding ShowAllCommand}" Padding="12,4" />
+                        <Button Content="仅未启用" Style="{StaticResource GhostButtonStyle}" Margin="6,0,0,0"
+                                Command="{Binding ShowDisabledCommand}" Padding="12,4" />
+                    </StackPanel>
+
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <ItemsControl ItemsSource="{Binding Rows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Border BorderBrush="{DynamicResource BorderBrushSoft}" BorderThickness="0,0,0,1"
+                                            Padding="4,8">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="30" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="70" />
+                                                <ColumnDefinition Width="70" />
+                                                <ColumnDefinition Width="70" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding CategoryLabel}" FontSize="11"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="{DynamicResource BrandBrush}" />
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock Text="{Binding Name}" FontSize="13"
+                                                           Foreground="{DynamicResource TextPrimaryBrush}" />
+                                                <TextBlock FontSize="11" Foreground="{DynamicResource TextMutedBrush}">
+                                                    <Run Text="{Binding SemesterText, Mode=OneWay}" />
+                                                    <Run Text=" · " />
+                                                    <Run Text="{Binding Instructor, Mode=OneWay}" />
+                                                    <Run Text=" · " />
+                                                    <Run Text="{Binding CourseCollege, Mode=OneWay}" />
+                                                </TextBlock>
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="2" VerticalAlignment="Center" FontSize="12"
+                                                       Margin="0,0,10,0"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       Text="{Binding CourseType}" />
+                                            <TextBlock Grid.Column="3" VerticalAlignment="Center" FontSize="12.5"
+                                                       HorizontalAlignment="Right"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       Text="{Binding Credit, StringFormat=F1}" />
+                                            <TextBlock Grid.Column="4" VerticalAlignment="Center" FontSize="14"
+                                                       FontWeight="Bold" HorizontalAlignment="Right"
+                                                       Text="{Binding ScoreText}"
+                                                       Foreground="{Binding Score, Converter={StaticResource ScoreToBrush}}" />
+                                            <TextBlock Grid.Column="5" VerticalAlignment="Center" FontSize="10.5"
+                                                       HorizontalAlignment="Right"
+                                                       Text="{Binding IsInCalculation, Converter={StaticResource EnumLabel}}"
+                                                       Foreground="{DynamicResource TextMutedBrush}" />
+                                            <CheckBox Grid.Column="6" VerticalAlignment="Center" Margin="12,0,0,0"
+                                                      IsChecked="{Binding IsEnabled, Mode=OneWay}"
+                                                      Checked="RowEnabled_Click" Unchecked="RowEnabled_Click" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+
+        <!-- 右栏 -->
+        <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource CardTitleStyle}" Text="综测计算方式" />
+                        <TextBlock Style="{StaticResource MutedTextStyle}" Margin="0,0,0,6" Text="所在学院" />
+                        <TextBlock Text="{Binding College}" FontSize="12.5" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBlock Style="{StaticResource MutedTextStyle}" Margin="0,8,0,4" Text="F2 公式" />
+                        <ComboBox ItemsSource="{Binding Methods}" SelectedItem="{Binding SelectedMethod}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Converter={StaticResource EnumLabel}}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <TextBlock Text="{Binding MethodDescription}" Style="{StaticResource MutedTextStyle}"
+                                   Margin="0,6,0,0" TextWrapping="Wrap" />
+                        <Button Content="自选 B2 课程" Style="{StaticResource GhostButtonStyle}"
+                                Command="{Binding SelectB2Command}" Margin="0,10,0,0"
+                                HorizontalAlignment="Left" />
+                        <TextBlock Text="{Binding B2SelectionSummary}" Style="{StaticResource MutedTextStyle}"
+                                   Margin="0,6,0,0" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12"
+                        Visibility="{Binding B2SelectionMode, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource CardTitleStyle}" Text="选择 B2 课程" />
+                        <TextBlock Style="{StaticResource MutedTextStyle}" Margin="0,0,0,8" TextWrapping="Wrap"
+                                   Text="勾选参与 B2 计算的选修 / 跨专业课程。新版公式最多计 8 门。" />
+                        <ItemsControl ItemsSource="{Binding CustomB2Rows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox Content="{Binding Name}" Margin="0,0,0,4"
+                                              Checked="B2_Click" Unchecked="B2_Click"
+                                              Tag="{Binding}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource CardTitleStyle}" Text="绩点换算" />
+                        <ComboBox ItemsSource="{Binding GpaScales}" SelectedItem="{Binding SelectedScale}"
+                                  DisplayMemberPath="Name" />
+                        <TextBlock Text="{Binding ScaleDescription}" Style="{StaticResource MutedTextStyle}"
+                                   Margin="0,6,0,0" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource CardTitleStyle}" Text="分数分布" />
+                        <ItemsControl ItemsSource="{Binding DistributionRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="46" />
+                                            <ColumnDefinition Width="196" />
+                                            <ColumnDefinition Width="34" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" FontSize="10.5" VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource TextMutedBrush}"
+                                                   Text="{Binding Label}" />
+                                        <Border Grid.Column="1" Height="13" CornerRadius="3"
+                                                Background="{DynamicResource SurfaceAltBrush}" Margin="0,0,6,0">
+                                            <Rectangle HorizontalAlignment="Left" RadiusX="3" RadiusY="3"
+                                                       Fill="{DynamicResource BrandLightBrush}"
+                                                       Width="{Binding BarWidth}" />
+                                        </Border>
+                                        <TextBlock Grid.Column="2" FontSize="10.5" VerticalAlignment="Center"
+                                                   Text="{Binding Count}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource CardStyle}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource CardTitleStyle}" Text="按学期" />
+                        <ItemsControl ItemsSource="{Binding BySemester}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,5">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" FontSize="12"
+                                                   Text="{Binding SemesterText}" />
+                                        <TextBlock Grid.Column="1" FontSize="12" Margin="0,0,12,0"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                   Text="{Binding AverageText}" />
+                                        <TextBlock Grid.Column="2" FontSize="12" FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource BrandBrush}"
+                                                   Text="{Binding GpaText}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>
